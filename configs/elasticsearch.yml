@@ -1,0 +1,14 @@
+# Elasticsearch configuration
+cluster.name: "docker-cluster"
+network.host: 0.0.0.0
+discovery.type: single-node
+
+# Set minimum memory requirements
+bootstrap.memory_lock: true
+
+# Disable security for demo purposes (enable in production)
+xpack.security.enabled: false
+
+# Allow connections from Kibana
+http.cors.enabled: true
+http.cors.allow-origin: "*"

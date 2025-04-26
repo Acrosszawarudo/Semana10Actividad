@@ -1,0 +1,39 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Load and evaluate rules
+rule_files:
+  - "alert.rules"
+
+# Scrape targets configuration
+scrape_configs:
+  # Scrape Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Scrape the Node Exporter
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Scrape the sample application
+  - job_name: 'sample-app'
+    static_configs:
+      - targets: ['sample-app:3001']
+
+  # Scrape Nginx metrics
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+
+  # Scrape Fluentd metrics
+  - job_name: 'fluentd'
+    static_configs:
+      - targets: ['fluentd:24231']
+
+  # Scrape cAdvisor for container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']

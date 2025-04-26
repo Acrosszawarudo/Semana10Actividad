@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # Fluentd - Log Collection
+  fluentd:
+    image: fluent/fluentd:v1.16-1
+    container_name: logging-fluentd
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    volumes:
+      - ./configs/fluentd/fluent.conf:/fluentd/etc/fluent.conf:ro
+      - ./configs/fluentd/log:/fluentd/log
+    environment:
+      - FLUENTD_CONF=fluent.conf
+    user: root
+    command: >
+      sh -c "apk add --no-cache --update build-base ruby-dev curl && 
+             gem install fluent-plugin-elasticsearch fluent-plugin-prometheus && 
+             apk del build-base ruby-dev && 
+             tini -s fluentd -c /fluentd/etc/fluent.conf"
+    networks:
+      - frontend
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+  # Elasticsearch - Log Storage and Indexing
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    container_name: logging-elasticsearch
+    ports:
+      - 9200:9200
+    volumes:
+      - ./configs/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    environment:
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+    networks:
+      - backend
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+  # Kibana - Log Visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.0
+    container_name: logging-kibana
+    volumes:
+      - ./configs/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+    depends_on:
+      - elasticsearch
+    networks:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+  # Nginx - Load Balancer & Reverse Proxy
+  nginx:
+    image: nginx:1.25
+    container_name: logging-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./configs/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./configs/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - kibana
+      - elasticsearch
+    networks:
+      - frontend
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  elasticsearch-data:
+  prometheus-data:
+  grafana-data:
